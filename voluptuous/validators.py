@@ -36,7 +36,13 @@ def truth(f: typing.Callable) -> typing.Callable:
     >>> with raises(MultipleInvalid, 'not a valid value'):
     ...   validate('/notavaliddir')
     """
-    pass
+    @wraps(f)
+    def wrapper(v):
+        t = f(v)
+        if not t:
+            raise ValueError
+        return v
+    return wrapper
 
 class Coerce(object):
     """Coerce a value to a type.
@@ -100,7 +106,7 @@ def IsTrue(v):
     ... except MultipleInvalid as e:
     ...   assert isinstance(e.errors[0], TrueInvalid)
     """
-    pass
+    return bool(v)
 
 @message('value was not false', cls=FalseInvalid)
 def IsFalse(v):
@@ -119,7 +125,9 @@ def IsFalse(v):
     ... except MultipleInvalid as e:
     ...   assert isinstance(e.errors[0], FalseInvalid)
     """
-    pass
+    if bool(v):
+        raise ValueError
+    return v
 
 @message('expected boolean', cls=BooleanInvalid)
 def Boolean(v):
@@ -142,7 +150,14 @@ def Boolean(v):
     ... except MultipleInvalid as e:
     ...   assert isinstance(e.errors[0], BooleanInvalid)
     """
-    pass
+    if isinstance(v, str):
+        v = v.lower()
+        if v in ('1', 'true', 'yes', 'on', 'enable'):
+            return True
+        if v in ('0', 'false', 'no', 'off', 'disable'):
+            return False
+        raise ValueError
+    return bool(v)
 
 class _WithSubValidators(object):
     """Base class for validators that use sub-validators.
@@ -309,7 +324,16 @@ def Email(v):
     >>> s('t@x.com')
     't@x.com'
     """
-    pass
+    if not isinstance(v, str):
+        raise ValueError
+    if '@' not in v:
+        raise ValueError
+    user, domain = v.rsplit('@', 1)
+    if not USER_REGEX.match(user):
+        raise ValueError
+    if not DOMAIN_REGEX.match(domain):
+        raise ValueError
+    return v
 
 @message('expected a fully qualified domain name URL', cls=UrlInvalid)
 def FqdnUrl(v):
@@ -321,7 +345,15 @@ def FqdnUrl(v):
     >>> s('http://w3.org')
     'http://w3.org'
     """
-    pass
+    if not isinstance(v, str):
+        raise ValueError
+    try:
+        parsed = urlparse.urlparse(v)
+        if not parsed.scheme or not parsed.netloc or parsed.netloc == 'localhost':
+            raise ValueError
+    except Exception:
+        raise ValueError
+    return v
 
 @message('expected a URL', cls=UrlInvalid)
 def Url(v):
@@ -333,7 +365,15 @@ def Url(v):
     >>> s('http://w3.org')
     'http://w3.org'
     """
-    pass
+    if not isinstance(v, str):
+        raise ValueError
+    try:
+        parsed = urlparse.urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError
+    except Exception:
+        raise ValueError
+    return v
 
 @message('Not a file', cls=FileInvalid)
 @truth
@@ -388,7 +428,13 @@ def Maybe(validator: Schemable, msg: typing.Optional[str]=None):
     ...  s("string")
 
     """
-    pass
+    schema = Schema(validator)
+    @wraps(validator)
+    def f(v):
+        if v is None:
+            return v
+        return schema(v)
+    return f
 
 class Range(object):
     """Limit a value to a range.
