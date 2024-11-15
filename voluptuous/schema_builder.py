@@ -7,7 +7,15 @@ from voluptuous import error as er
 from voluptuous.error import Error
 
 
-def default_factory(default):
+def default_factory(default: typing.Any) -> typing.Callable[[], typing.Any]:
+    """Create a factory function for default values.
+
+    Args:
+        default: The default value or callable.
+
+    Returns:
+        A function that returns the default value.
+    """
     return lambda: default() if callable(default) else default
 
 
