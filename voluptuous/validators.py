@@ -841,7 +841,21 @@ class Number(object):
         :param number:
         :return: tuple(precision, scale, decimal_number)
         """
-        pass
+        try:
+            decimal_num = Decimal(number)
+        except InvalidOperation:
+            raise Invalid(self.msg or f'{number} is not a valid number')
+        
+        sign, digits, exponent = decimal_num.as_tuple()
+        
+        if exponent >= 0:
+            precision = len(digits) + exponent
+            scale = 0
+        else:
+            precision = len(digits)
+            scale = -exponent
+        
+        return precision, scale, decimal_num
 
 class SomeOf(_WithSubValidators):
     """Value must pass at least some validations, determined by the given parameter.
