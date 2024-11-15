@@ -112,6 +112,10 @@ class Coerce(object):
         """Validate that the value is in the specified container."""
         """Clamp the value to the specified range."""
         """Validate that the value is within the specified range."""
+        """Validate that the value is equal to the target."""
+        """Validate that the value is in the specified container."""
+        """Clamp the value to the specified range."""
+        """Validate that the value is within the specified range."""
         """Coerce the value to the specified type."""
         try:
             return self.type(v)
@@ -390,6 +394,8 @@ class Replace(object):
         self.msg = msg
 
     def __call__(self, v: str) -> str:
+        """Validate that the value matches the specified date format."""
+        """Validate that the value matches the specified datetime format."""
         """Validate that the value matches the specified date format."""
         """Validate that the value matches the specified datetime format."""
         """Apply the regex substitution to the value."""
@@ -790,6 +796,8 @@ class Contains(object):
     def __call__(self, v: typing.Sequence) -> typing.Sequence:
         """Validate that the sequence contains the specified values in any order."""
         """Validate that the sequence matches the exact sequence of validators."""
+        """Validate that the sequence contains the specified values in any order."""
+        """Validate that the sequence matches the exact sequence of validators."""
         """Validate that the item is in the sequence."""
         try:
             check = self.item not in v
@@ -895,6 +903,9 @@ class Equal(object):
     1
     >>> with raises(Invalid):
     ...    s(2)
+
+    >>> with raises(Invalid):
+    ...    s('moo')
 
     Validators are not supported, match must be exact:
 
@@ -1100,6 +1111,13 @@ class SomeOf(_WithSubValidators):
         max_valid: typing.Optional[int] = None,
         **kwargs: typing.Any,
     ) -> None:
+        """Initialize SomeOf validator.
+
+        :param validators: List of schemas or validators to match input against.
+        :param min_valid: Minimum number of valid schemas.
+        :param max_valid: Maximum number of valid schemas.
+        :param kwargs: All other keyword arguments are passed to the sub-schema constructors.
+        """
         assert (
             min_valid is not None or max_valid is not None
         ), f'when using "{type(self).__name__}" you should specify at least one of min_valid and max_valid'
