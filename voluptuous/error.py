@@ -113,7 +113,7 @@ class LiteralInvalid(Invalid):
     """The literal values do not match."""
 
 class LengthInvalid(Invalid):
-    pass
+    """The value has an invalid length."""
 
 class DatetimeInvalid(Invalid):
     """The value is not a formatted datetime string."""
@@ -132,8 +132,10 @@ class ExactSequenceInvalid(Invalid):
 
 class NotEnoughValid(Invalid):
     """The value did not pass enough validations."""
-    pass
+    def __init__(self, message: str, path: typing.Optional[typing.List[typing.Hashable]]=None, error_message: typing.Optional[str]=None, error_type: typing.Optional[str]=None) -> None:
+        super().__init__(message, path, error_message, error_type)
 
 class TooManyValid(Invalid):
     """The value passed more than expected validations."""
-    pass
+    def __init__(self, message: str, path: typing.Optional[typing.List[typing.Hashable]]=None, error_message: typing.Optional[str]=None, error_type: typing.Optional[str]=None) -> None:
+        super().__init__(message, path, error_message, error_type)
