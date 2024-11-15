@@ -6,29 +6,13 @@ import typing
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from voluptuous.error import (
-    BooleanInvalid,
-    CoerceInvalid,
-    ContainsInvalid,
-    DateInvalid,
-    DatetimeInvalid,
-    DirInvalid,
-    EmailInvalid,
-    ExactSequenceInvalid,
-    FalseInvalid,
-    FileInvalid,
-    InInvalid,
-    Invalid,
-    LengthInvalid,
-    MatchInvalid,
-    MultipleInvalid,
-    NotInInvalid,
-    PathInvalid,
-    RangeInvalid,
-    TrueInvalid,
-    TypeInvalid,
-    UrlInvalid,
+    AllInvalid, AnyInvalid, BooleanInvalid, CoerceInvalid, ContainsInvalid,
+    DateInvalid, DatetimeInvalid, DirInvalid, EmailInvalid, ExactSequenceInvalid,
+    FalseInvalid, FileInvalid, InInvalid, Invalid, LengthInvalid, MatchInvalid,
+    MultipleInvalid, NotEnoughValid, NotInInvalid, PathInvalid, RangeInvalid,
+    TooManyValid, TrueInvalid, TypeInvalid, UrlInvalid
 )
-from voluptuous.schema_builder import Schema, Schemable, message
+from voluptuous.schema_builder import Schema, Schemable, message, raises
 
 if typing.TYPE_CHECKING:
     pass
@@ -108,6 +92,11 @@ class Coerce(object):
         self.type_name = type.__name__
 
     def __call__(self, v: typing.Any) -> typing.Any:
+        """Validate that the value is equal to the target."""
+        """Validate that the value is in the specified container."""
+        """Clamp the value to the specified range."""
+        """Validate that the value is within the specified range."""
+        """Coerce the value to the specified type."""
         try:
             return self.type(v)
         except (ValueError, TypeError, InvalidOperation):
@@ -348,6 +337,7 @@ class Match(object):
         self.msg = msg
 
     def __call__(self, v: typing.Any) -> str:
+        """Match the value against the regular expression."""
         try:
             match = self.pattern.match(v)
         except TypeError:
@@ -384,6 +374,9 @@ class Replace(object):
         self.msg = msg
 
     def __call__(self, v: str) -> str:
+        """Validate that the value matches the specified date format."""
+        """Validate that the value matches the specified datetime format."""
+        """Apply the regex substitution to the value."""
         return self.pattern.sub(self.substitution, v)
 
     def __repr__(self) -> str:
@@ -643,6 +636,7 @@ class Length(object):
         self.msg = msg
 
     def __call__(self, v: typing.Sized) -> typing.Sized:
+        """Validate that the length of the value is within the specified range."""
         try:
             if self.min is not None and len(v) < self.min:
                 raise LengthInvalid(
@@ -736,12 +730,13 @@ class NotIn(object):
     """Validate that a value is not in a collection."""
 
     def __init__(
-        self, container: typing.Iterable, msg: typing.Optional[str] = None
+        self, container: typing.Container, msg: typing.Optional[str] = None
     ) -> None:
         self.container = container
         self.msg = msg
 
     def __call__(self, v: typing.Any) -> typing.Any:
+        """Validate that the value is not in the specified container."""
         try:
             check = v in self.container
         except TypeError:
@@ -777,6 +772,9 @@ class Contains(object):
         self.msg = msg
 
     def __call__(self, v: typing.Sequence) -> typing.Sequence:
+        """Validate that the sequence contains the specified values in any order."""
+        """Validate that the sequence matches the exact sequence of validators."""
+        """Validate that the item is in the sequence."""
         try:
             check = self.item not in v
         except TypeError:
@@ -858,6 +856,7 @@ class Unique(object):
         self.msg = msg
 
     def __call__(self, v: typing.Iterable) -> typing.Iterable:
+        """Validate that the iterable contains unique items."""
         try:
             set_v = set(v)
         except TypeError as e:
