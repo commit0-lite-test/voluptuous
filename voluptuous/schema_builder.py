@@ -6,8 +6,10 @@ from functools import cache, wraps
 from voluptuous import error as er
 from voluptuous.error import Error
 
+
 def default_factory(default):
     return lambda: default() if callable(default) else default
+
 
 PREVENT_EXTRA = 0
 ALLOW_EXTRA = 1
@@ -173,10 +175,14 @@ class Schema(object):
         except er.Invalid as e:
             raise er.MultipleInvalid([e])
 
-    def _compile_mapping(self, schema: typing.Any, invalid_msg: typing.Optional[str] = None) -> typing.Callable:
+    def _compile_mapping(
+        self, schema: typing.Any, invalid_msg: typing.Optional[str] = None
+    ) -> typing.Callable:
         """Create validator for given mapping."""
 
-        def validate_mapping(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Dict[typing.Any, typing.Any]:
+        def validate_mapping(
+            path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any
+        ) -> typing.Dict[typing.Any, typing.Any]:
             if not isinstance(value, dict):
                 raise er.DictInvalid(invalid_msg or "expected a dictionary")
 
@@ -229,7 +235,9 @@ class Schema(object):
 
         """
 
-        def validate_object(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Any:
+        def validate_object(
+            path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any
+        ) -> typing.Any:
             if not isinstance(value, schema.cls):
                 raise er.ObjectInvalid(
                     "expected an instance of %s" % schema.cls.__name__
@@ -335,7 +343,9 @@ class Schema(object):
 
         """
 
-        def validate_dict(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Dict[typing.Any, typing.Any]:
+        def validate_dict(
+            path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any
+        ) -> typing.Dict[typing.Any, typing.Any]:
             if not isinstance(value, dict):
                 raise er.DictInvalid("expected a dictionary")
 
@@ -383,7 +393,9 @@ class Schema(object):
 
         return validate_dict
 
-    def _compile_sequence(self, schema: typing.Any, seq_type: typing.Type) -> typing.Callable:
+    def _compile_sequence(
+        self, schema: typing.Any, seq_type: typing.Type
+    ) -> typing.Callable:
         """Validate a sequence type.
 
         This is a sequence of valid values or validators tried in order.
@@ -397,7 +409,9 @@ class Schema(object):
         [1]
         """
 
-        def validate_sequence(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Any:
+        def validate_sequence(
+            path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any
+        ) -> typing.Any:
             if not isinstance(value, seq_type):
                 raise er.SequenceTypeInvalid("expected a %s" % seq_type.__name__)
 
@@ -471,7 +485,9 @@ class Schema(object):
         ...   validator(set(['a']))
         """
 
-        def validate_set(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Set[typing.Any]:
+        def validate_set(
+            path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any
+        ) -> typing.Set[typing.Any]:
             if not isinstance(value, set):
                 raise er.Invalid("expected a set")
 
@@ -549,7 +565,9 @@ def _compile_scalar(schema: typing.Any) -> typing.Callable:
     """
     if isinstance(schema, type):
 
-        def validate_instance(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
+        def validate_instance(
+            path: typing.List[typing.Any], _: typing.Any, value: typing.Any
+        ) -> typing.Any:
             if isinstance(value, schema):
                 return value
             else:
@@ -559,7 +577,9 @@ def _compile_scalar(schema: typing.Any) -> typing.Callable:
 
     elif callable(schema):
 
-        def validate_callable(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
+        def validate_callable(
+            path: typing.List[typing.Any], _: typing.Any, value: typing.Any
+        ) -> typing.Any:
             try:
                 return schema(value)
             except ValueError:
@@ -573,7 +593,9 @@ def _compile_scalar(schema: typing.Any) -> typing.Callable:
 
     else:
 
-        def validate_value(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
+        def validate_value(
+            path: typing.List[typing.Any], _: typing.Any, value: typing.Any
+        ) -> typing.Any:
             if value != schema:
                 raise er.Invalid(f"expected {schema!r}")
             return value
@@ -584,7 +606,9 @@ def _compile_scalar(schema: typing.Any) -> typing.Callable:
 def _compile_itemsort() -> typing.Callable:
     """Return sort function of mappings"""
 
-    def item_sort(item: typing.Tuple[typing.Any, typing.Any]) -> typing.Tuple[bool, typing.Any]:
+    def item_sort(
+        item: typing.Tuple[typing.Any, typing.Any],
+    ) -> typing.Tuple[bool, typing.Any]:
         key, _ = item
         if isinstance(key, Marker):
             return not isinstance(key, Required), str(key)
@@ -596,7 +620,9 @@ def _compile_itemsort() -> typing.Callable:
 _sort_item = _compile_itemsort()
 
 
-def _iterate_mapping_candidates(schema: typing.Dict[typing.Any, typing.Any]) -> typing.List[typing.Tuple[typing.Any, typing.Any]]:
+def _iterate_mapping_candidates(
+    schema: typing.Dict[typing.Any, typing.Any],
+) -> typing.List[typing.Tuple[typing.Any, typing.Any]]:
     """Iterate over schema in a meaningful order."""
     return sorted(schema.items(), key=_sort_item)
 
@@ -975,7 +1001,9 @@ def message(
     return decorator
 
 
-def _args_to_dict(func: typing.Callable, args: typing.Tuple[typing.Any, ...]) -> typing.Dict[str, typing.Any]:
+def _args_to_dict(
+    func: typing.Callable, args: typing.Tuple[typing.Any, ...]
+) -> typing.Dict[str, typing.Any]:
     """Returns argument names as values as key-value pairs."""
     sig = inspect.signature(func)
     return {
@@ -986,7 +1014,9 @@ def _args_to_dict(func: typing.Callable, args: typing.Tuple[typing.Any, ...]) ->
     }
 
 
-def _merge_args_with_kwargs(args_dict: typing.Dict[str, typing.Any], kwargs_dict: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+def _merge_args_with_kwargs(
+    args_dict: typing.Dict[str, typing.Any], kwargs_dict: typing.Dict[str, typing.Any]
+) -> typing.Dict[str, typing.Any]:
     """Merge args with kwargs."""
     ret = args_dict.copy()
     ret.update(kwargs_dict)
