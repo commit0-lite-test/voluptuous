@@ -59,143 +59,125 @@ class RequiredFieldInvalid(InvalidError):
     """Required field was missing."""
 
 
-class ObjectInvalid(Invalid):
+class ObjectInvalid(InvalidError):
     """The value we found was not an object."""
 
 
-class DictInvalid(Invalid):
+class DictInvalid(InvalidError):
     """The value found was not a dict."""
 
 
-class ExclusiveInvalid(Invalid):
+class ExclusiveInvalid(InvalidError):
     """More than one value found in exclusion group."""
 
 
-class InclusiveInvalid(Invalid):
+class InclusiveInvalid(InvalidError):
     """Not all values found in inclusion group."""
 
 
-class SequenceTypeInvalid(Invalid):
+class SequenceTypeInvalid(InvalidError):
     """The type found is not a sequence type."""
 
 
-class TypeInvalid(Invalid):
+class TypeInvalid(InvalidError):
     """The value was not of required type."""
 
 
-class ValueInvalid(Invalid):
+class ValueInvalid(InvalidError):
     """The value was found invalid by evaluation function."""
 
 
-class ContainsInvalid(Invalid):
+class ContainsInvalid(InvalidError):
     """List does not contain item"""
 
 
-class ScalarInvalid(Invalid):
+class ScalarInvalid(InvalidError):
     """Scalars did not match."""
 
 
-class CoerceInvalid(Invalid):
+class CoerceInvalid(InvalidError):
     """Impossible to coerce value to type."""
 
 
-class AnyInvalid(Invalid):
+class AnyInvalid(InvalidError):
     """The value did not pass any validator."""
 
 
-class AllInvalid(Invalid):
+class AllInvalid(InvalidError):
     """The value did not pass all validators."""
 
 
-class MatchInvalid(Invalid):
+class MatchInvalid(InvalidError):
     """The value does not match the given regular expression."""
 
 
-class RangeInvalid(Invalid):
+class RangeInvalid(InvalidError):
     """The value is not in given range."""
 
 
-class TrueInvalid(Invalid):
+class TrueInvalid(InvalidError):
     """The value is not True."""
 
 
-class FalseInvalid(Invalid):
+class FalseInvalid(InvalidError):
     """The value is not False."""
 
 
-class BooleanInvalid(Invalid):
+class BooleanInvalid(InvalidError):
     """The value is not a boolean."""
 
 
-class UrlInvalid(Invalid):
+class UrlInvalid(InvalidError):
     """The value is not a URL."""
 
 
-class EmailInvalid(Invalid):
+class EmailInvalid(InvalidError):
     """The value is not an email address."""
 
 
-class FileInvalid(Invalid):
+class FileInvalid(InvalidError):
     """The value is not a file."""
 
 
-class DirInvalid(Invalid):
+class DirInvalid(InvalidError):
     """The value is not a directory."""
 
 
-class PathInvalid(Invalid):
+class PathInvalid(InvalidError):
     """The value is not a path."""
 
 
-class LiteralInvalid(Invalid):
+class LiteralInvalid(InvalidError):
     """The literal values do not match."""
 
 
-class LengthInvalid(Invalid):
+class LengthInvalid(InvalidError):
     """The value has an invalid length."""
 
 
-class DatetimeInvalid(Invalid):
+class DatetimeInvalid(InvalidError):
     """The value is not a formatted datetime string."""
 
 
-class DateInvalid(Invalid):
+class DateInvalid(InvalidError):
     """The value is not a formatted date string."""
 
 
-class InInvalid(Invalid):
+class InInvalid(InvalidError):
     pass
 
 
-class NotInInvalid(Invalid):
+class NotInInvalid(InvalidError):
     pass
 
 
-class ExactSequenceInvalid(Invalid):
+class ExactSequenceInvalid(InvalidError):
     pass
 
 
-class NotEnoughValid(Invalid):
+class NotEnoughValid(InvalidError):
     """The value did not pass enough validations."""
 
-    def __init__(
-        self,
-        message: str,
-        path: typing.Optional[typing.List[typing.Hashable]] = None,
-        error_message: typing.Optional[str] = None,
-        error_type: typing.Optional[str] = None,
-    ) -> None:
-        super().__init__(message, path, error_message, error_type)
 
-
-class TooManyValid(Invalid):
+class TooManyValid(InvalidError):
     """The value passed more than expected validations."""
-
-    def __init__(
-        self,
-        message: str,
-        path: typing.Optional[typing.List[typing.Hashable]] = None,
-        error_message: typing.Optional[str] = None,
-        error_type: typing.Optional[str] = None,
-    ) -> None:
-        super().__init__(message, path, error_message, error_type)
