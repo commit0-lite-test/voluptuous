@@ -102,7 +102,17 @@ class Schema(object):
 
         Note: only very basic inference is supported.
         """
-        pass
+        if isinstance(data, dict):
+            return cls({k: cls.infer(v) for k, v in data.items()})
+        elif isinstance(data, list):
+            if data:
+                return [cls.infer(data[0])]
+            else:
+                return []
+        elif isinstance(data, (int, float, str, bool)):
+            return type(data)
+        else:
+            return object
 
     def __eq__(self, other):
         if not isinstance(other, Schema):
@@ -129,7 +139,33 @@ class Schema(object):
 
     def _compile_mapping(self, schema, invalid_msg=None):
         """Create validator for given mapping."""
-        pass
+        def validate_mapping(path, iterable, value):
+            if not isinstance(value, dict):
+                raise er.DictInvalid(invalid_msg or 'expected a dictionary')
+
+            out = {}
+            errors = []
+            for key, validator in schema.items():
+                key_name = key
+                if isinstance(key, Marker):
+                    key_name = key.schema
+
+                if key_name in value:
+                    try:
+                        out[key_name] = validator(path + [key_name], value[key_name])
+                    except er.Invalid as e:
+                        errors.append(e)
+                elif isinstance(key, Required):
+                    errors.append(er.RequiredFieldInvalid(f"required key not provided @ data['{key_name}']"))
+                elif isinstance(key, Optional) and key.default != UNDEFINED:
+                    out[key_name] = key.default() if callable(key.default) else key.default
+
+            if errors:
+                raise er.MultipleInvalid(errors)
+
+            return out
+
+        return validate_mapping
 
     def _compile_object(self, schema):
         """Validate an object.
@@ -149,7 +185,26 @@ class Schema(object):
             ...   validate(Structure(one='three'))
 
         """
-        pass
+        def validate_object(path, iterable, value):
+            if not isinstance(value, schema.cls):
+                raise er.ObjectInvalid('expected an instance of %s' % schema.cls.__name__)
+
+            errors = []
+            for key, validator in schema.items():
+                if hasattr(value, key):
+                    try:
+                        setattr(value, key, validator(path + [key], getattr(value, key)))
+                    except er.Invalid as e:
+                        errors.append(e)
+                elif isinstance(key, Required):
+                    errors.append(er.RequiredFieldInvalid(f"object lacks required attribute '{key}'"))
+
+            if errors:
+                raise er.MultipleInvalid(errors)
+
+            return value
+
+        return validate_object
 
     def _compile_dict(self, schema):
         """Validate a dictionary.
@@ -227,7 +282,43 @@ class Schema(object):
          "expected str for dictionary value @ data['adict']['strfield']"]
 
         """
-        pass
+        def validate_dict(path, iterable, value):
+            if not isinstance(value, dict):
+                raise er.DictInvalid('expected a dictionary')
+
+            out = {}
+            errors = []
+            for key, key_schema in schema.items():
+                if isinstance(key, Marker):
+                    key_name = key.schema
+                else:
+                    key_name = key
+
+                if key_name in value:
+                    try:
+                        out[key_name] = key_schema(path + [key_name], value[key_name])
+                    except er.Invalid as e:
+                        errors.append(e)
+                elif isinstance(key, Required):
+                    errors.append(er.RequiredFieldInvalid(f"required key not provided @ data['{key_name}']"))
+                elif isinstance(key, Optional) and key.default != UNDEFINED:
+                    out[key_name] = key.default() if callable(key.default) else key.default
+
+            if self.extra == PREVENT_EXTRA:
+                extra_keys = set(value) - set(schema)
+                if extra_keys:
+                    errors.append(er.Invalid(f"extra keys not allowed @ data['{extra_keys.pop()}']"))
+            elif self.extra == REMOVE_EXTRA:
+                for key in set(value) - set(schema):
+                    if key not in out:
+                        out[key] = value[key]
+
+            if errors:
+                raise er.MultipleInvalid(errors)
+
+            return out
+
+        return validate_dict
 
     def _compile_sequence(self, schema, seq_type):
         """Validate a sequence type.
@@ -242,7 +333,35 @@ class Schema(object):
         >>> validator([1])
         [1]
         """
-        pass
+        def validate_sequence(path, iterable, value):
+            if not isinstance(value, seq_type):
+                raise er.SequenceTypeInvalid('expected a %s' % seq_type.__name__)
+
+            # Empty seq schema, allow any data
+            if not schema:
+                return value
+
+            result = []
+            errors = []
+            for i, item in enumerate(value):
+                try:
+                    for validator in schema:
+                        try:
+                            result.append(validator(path + [i], item))
+                            break
+                        except er.Invalid:
+                            pass
+                    else:
+                        raise er.Invalid('no valid element found for %s' % item)
+                except er.Invalid as e:
+                    errors.append(e)
+
+            if errors:
+                raise er.MultipleInvalid(errors)
+
+            return type(value)(result)
+
+        return validate_sequence
 
     def _compile_tuple(self, schema):
         """Validate a tuple.
@@ -257,7 +376,7 @@ class Schema(object):
         >>> validator((1,))
         (1,)
         """
-        pass
+        return self._compile_sequence(schema, tuple)
 
     def _compile_list(self, schema):
         """Validate a list.
@@ -272,7 +391,7 @@ class Schema(object):
         >>> validator([1])
         [1]
         """
-        pass
+        return self._compile_sequence(schema, list)
 
     def _compile_set(self, schema):
         """Validate a set.
@@ -287,7 +406,31 @@ class Schema(object):
         >>> with raises(er.MultipleInvalid, 'invalid value in set'):
         ...   validator(set(['a']))
         """
-        pass
+        def validate_set(path, iterable, value):
+            if not isinstance(value, set):
+                raise er.Invalid('expected a set')
+
+            errors = []
+            result = set()
+            for item in value:
+                try:
+                    for validator in schema:
+                        try:
+                            result.add(validator(path, item))
+                            break
+                        except er.Invalid:
+                            pass
+                    else:
+                        raise er.Invalid('invalid value in set')
+                except er.Invalid as e:
+                    errors.append(e)
+
+            if errors:
+                raise er.MultipleInvalid(errors)
+
+            return result
+
+        return validate_set
 
     def extend(self, schema: Schemable, required: typing.Optional[bool]=None, extra: typing.Optional[int]=None) -> Schema:
         """Create a new `Schema` by merging this and the provided `schema`.
@@ -302,7 +445,17 @@ class Schema(object):
         :param required: if set, overrides `required` of this `Schema`
         :param extra: if set, overrides `extra` of this `Schema`
         """
-        pass
+        if not isinstance(self.schema, dict) or not isinstance(schema, dict):
+            raise ValueError("Both schemas must be dictionary-based")
+
+        new_schema = self.schema.copy()
+        new_schema.update(schema)
+
+        return Schema(
+            new_schema,
+            required=self.required if required is None else required,
+            extra=self.extra if extra is None else extra
+        )
 
 def _compile_scalar(schema):
     """A scalar value.
@@ -323,23 +476,56 @@ def _compile_scalar(schema):
     >>> with raises(er.Invalid, 'not a valid value'):
     ...   _compile_scalar(lambda v: float(v))([], 'a')
     """
-    pass
+    if isinstance(schema, type):
+        def validate_instance(path, _, value):
+            if isinstance(value, schema):
+                return value
+            else:
+                raise er.Invalid(f'expected {schema.__name__}')
+        return validate_instance
+
+    elif callable(schema):
+        def validate_callable(path, _, value):
+            try:
+                return schema(value)
+            except ValueError:
+                raise er.Invalid('not a valid value')
+            except er.Invalid as e:
+                raise e
+            except Exception as e:
+                raise er.Invalid(str(e))
+        return validate_callable
+
+    else:
+        def validate_value(path, _, value):
+            if value != schema:
+                raise er.Invalid(f'expected {schema!r}')
+            return value
+        return validate_value
 
 def _compile_itemsort():
     """return sort function of mappings"""
-    pass
+    def item_sort(item):
+        key, _ = item
+        if isinstance(key, Marker):
+            return not isinstance(key, Required), str(key)
+        return not isinstance(key, Required), key
+
+    return item_sort
 _sort_item = _compile_itemsort()
 
 def _iterate_mapping_candidates(schema):
     """Iterate over schema in a meaningful order."""
-    pass
+    return sorted(schema.items(), key=_sort_item)
 
 def _iterate_object(obj):
     """Return iterator over object attributes. Respect objects with
     defined __slots__.
 
     """
-    pass
+    if hasattr(obj, '__slots__'):
+        return ((slot, getattr(obj, slot)) for slot in obj.__slots__)
+    return obj.__dict__.items()
 
 class Msg(object):
     """Report a user-friendly message if a schema fails to validate.
@@ -631,15 +817,32 @@ def message(default: typing.Optional[str]=None, cls: typing.Optional[typing.Type
         ... except er.MultipleInvalid as e:
         ...   assert isinstance(e.errors[0], IntegerInvalid)
     """
-    pass
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            msg = kwargs.pop('msg', None)
+            clsoverride = kwargs.pop('clsoverride', None)
+            try:
+                return func(*args, **kwargs)
+            except ValueError:
+                raise (clsoverride or cls or er.Invalid)(msg or default or 'invalid value')
+        return wrapper
+    return decorator
 
 def _args_to_dict(func, args):
     """Returns argument names as values as key-value pairs."""
-    pass
+    sig = inspect.signature(func)
+    return {
+        param.name: value
+        for param, value in zip(sig.parameters.values(), args)
+        if param.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    }
 
 def _merge_args_with_kwargs(args_dict, kwargs_dict):
     """Merge args with kwargs."""
-    pass
+    ret = args_dict.copy()
+    ret.update(kwargs_dict)
+    return ret
 
 def validate(*a, **kw) -> typing.Callable:
     """Decorator for validating arguments of a function against a given schema.
@@ -657,4 +860,16 @@ def validate(*a, **kw) -> typing.Callable:
         ...   return arg1 * 2
 
     """
-    pass
+    def dec(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            schema = Schema(kw)
+            merged_args = _merge_args_with_kwargs(_args_to_dict(func, args), kwargs)
+            validated = schema(merged_args)
+            result = func(**validated)
+            if '__return__' in kw:
+                return_validator = Schema(kw['__return__'])
+                return return_validator(result)
+            return result
+        return wrapper
+    return dec
