@@ -33,6 +33,7 @@ class InvalidError(Error):
 
     @property
     def path(self) -> typing.List[typing.Hashable]:
+        """Return the path to the error."""
         return self._path
 
     def __str__(self) -> str:
