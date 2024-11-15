@@ -4,7 +4,10 @@ import inspect
 import typing
 from functools import cache, wraps
 from voluptuous import error as er
-from voluptuous.error import Error
+from voluptuous.error import (
+    Error, Invalid, MultipleInvalid, DictInvalid, RequiredFieldInvalid,
+    ObjectInvalid, SequenceTypeInvalid, SchemaError
+)
 
 
 def default_factory(default: typing.Any) -> typing.Callable[[], typing.Any]:
@@ -693,13 +696,14 @@ class Msg(object):
         self.cls = cls
 
     def __call__(self, v: typing.Any) -> typing.Any:
+        """Validate the value against the schema with a custom error message."""
         try:
             return self.schema(v)
-        except er.Invalid as e:
+        except Invalid as e:
             if len(e.path) > 1:
                 raise e
             else:
-                raise (self.cls or er.Invalid)(self.msg)
+                raise (self.cls or Invalid)(self.msg)
 
     def __repr__(self):
         return "Msg(%s, %s, cls=%s)" % (self._schema, self.msg, self.cls)
@@ -968,7 +972,7 @@ class Remove(Marker):
 def message(
     default: typing.Optional[str] = None,
     cls: typing.Optional[typing.Type[Error]] = None,
-) -> typing.Callable:
+) -> typing.Callable[[typing.Callable], typing.Callable]:
     """Convenience decorator to allow functions to provide a message.
 
     Set a default message:
@@ -978,34 +982,34 @@ def message(
         ...   return int(v)
 
         >>> validate = Schema(isint())
-        >>> with raises(er.MultipleInvalid, 'not an integer'):
+        >>> with raises(MultipleInvalid, 'not an integer'):
         ...   validate('a')
 
     The message can be overridden on a per validator basis:
 
         >>> validate = Schema(isint('bad'))
-        >>> with raises(er.MultipleInvalid, 'bad'):
+        >>> with raises(MultipleInvalid, 'bad'):
         ...   validate('a')
 
     The class thrown too:
 
-        >>> class IntegerInvalid(er.Invalid): pass
+        >>> class IntegerInvalid(Invalid): pass
         >>> validate = Schema(isint('bad', clsoverride=IntegerInvalid))
         >>> try:
         ...  validate('a')
-        ... except er.MultipleInvalid as e:
+        ... except MultipleInvalid as e:
         ...   assert isinstance(e.errors[0], IntegerInvalid)
     """
 
-    def decorator(func):
+    def decorator(func: typing.Callable) -> typing.Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
             msg = kwargs.pop("msg", None)
             clsoverride = kwargs.pop("clsoverride", None)
             try:
                 return func(*args, **kwargs)
             except ValueError:
-                raise (clsoverride or cls or er.Invalid)(
+                raise (clsoverride or cls or Invalid)(
                     msg or default or "invalid value"
                 )
 
