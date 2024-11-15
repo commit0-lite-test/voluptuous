@@ -1,4 +1,5 @@
 import typing
+from voluptuous import __version__
 from voluptuous.error import Invalid, MultipleInvalid
 
 MAX_VALIDATION_ERROR_ITEM_LENGTH = 500
