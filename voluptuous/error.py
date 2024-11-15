@@ -44,7 +44,7 @@ class InvalidError(Error):
         return output + path
 
 
-class MultipleInvalid(InvalidError):
+class MultipleInvalidError(InvalidError):
     def __init__(
         self, errors: typing.Optional[typing.List[InvalidError]] = None
     ) -> None:
@@ -52,135 +52,135 @@ class MultipleInvalid(InvalidError):
         self.errors = errors[:] if errors else []
 
     def __repr__(self) -> str:
-        return "MultipleInvalid(%r)" % self.errors
+        return "MultipleInvalidError(%r)" % self.errors
 
     def __str__(self) -> str:
         return str(self.errors[0]) if self.errors else "No errors"
 
 
-class RequiredFieldInvalid(InvalidError):
+class RequiredFieldInvalidError(InvalidError):
     """Required field was missing."""
 
 
-class ObjectInvalid(InvalidError):
+class ObjectInvalidError(InvalidError):
     """The value we found was not an object."""
 
 
-class DictInvalid(InvalidError):
+class DictInvalidError(InvalidError):
     """The value found was not a dict."""
 
 
-class ExclusiveInvalid(InvalidError):
+class ExclusiveInvalidError(InvalidError):
     """More than one value found in exclusion group."""
 
 
-class InclusiveInvalid(InvalidError):
+class InclusiveInvalidError(InvalidError):
     """Not all values found in inclusion group."""
 
 
-class SequenceTypeInvalid(InvalidError):
+class SequenceTypeInvalidError(InvalidError):
     """The type found is not a sequence type."""
 
 
-class TypeInvalid(InvalidError):
+class TypeInvalidError(InvalidError):
     """The value was not of required type."""
 
 
-class ValueInvalid(InvalidError):
+class ValueInvalidError(InvalidError):
     """The value was found invalid by evaluation function."""
 
 
-class ContainsInvalid(InvalidError):
+class ContainsInvalidError(InvalidError):
     """List does not contain item"""
 
 
-class ScalarInvalid(InvalidError):
+class ScalarInvalidError(InvalidError):
     """Scalars did not match."""
 
 
-class CoerceInvalid(InvalidError):
+class CoerceInvalidError(InvalidError):
     """Impossible to coerce value to type."""
 
 
-class AnyInvalid(InvalidError):
+class AnyInvalidError(InvalidError):
     """The value did not pass any validator."""
 
 
-class AllInvalid(InvalidError):
+class AllInvalidError(InvalidError):
     """The value did not pass all validators."""
 
 
-class MatchInvalid(InvalidError):
+class MatchInvalidError(InvalidError):
     """The value does not match the given regular expression."""
 
 
-class RangeInvalid(InvalidError):
+class RangeInvalidError(InvalidError):
     """The value is not in given range."""
 
 
-class TrueInvalid(InvalidError):
+class TrueInvalidError(InvalidError):
     """The value is not True."""
 
 
-class FalseInvalid(InvalidError):
+class FalseInvalidError(InvalidError):
     """The value is not False."""
 
 
-class BooleanInvalid(InvalidError):
+class BooleanInvalidError(InvalidError):
     """The value is not a boolean."""
 
 
-class UrlInvalid(InvalidError):
+class UrlInvalidError(InvalidError):
     """The value is not a URL."""
 
 
-class EmailInvalid(InvalidError):
+class EmailInvalidError(InvalidError):
     """The value is not an email address."""
 
 
-class FileInvalid(InvalidError):
+class FileInvalidError(InvalidError):
     """The value is not a file."""
 
 
-class DirInvalid(InvalidError):
+class DirInvalidError(InvalidError):
     """The value is not a directory."""
 
 
-class PathInvalid(InvalidError):
+class PathInvalidError(InvalidError):
     """The value is not a path."""
 
 
-class LiteralInvalid(InvalidError):
+class LiteralInvalidError(InvalidError):
     """The literal values do not match."""
 
 
-class LengthInvalid(InvalidError):
+class LengthInvalidError(InvalidError):
     """The value has an invalid length."""
 
 
-class DatetimeInvalid(InvalidError):
+class DatetimeInvalidError(InvalidError):
     """The value is not a formatted datetime string."""
 
 
-class DateInvalid(InvalidError):
+class DateInvalidError(InvalidError):
     """The value is not a formatted date string."""
 
 
-class InInvalid(InvalidError):
+class InInvalidError(InvalidError):
     pass
 
 
-class NotInInvalid(InvalidError):
+class NotInInvalidError(InvalidError):
     pass
 
 
-class ExactSequenceInvalid(InvalidError):
+class ExactSequenceInvalidError(InvalidError):
     pass
 
 
-class NotEnoughValid(InvalidError):
+class NotEnoughValidError(InvalidError):
     """The value did not pass enough validations."""
 
 
-class TooManyValid(InvalidError):
+class TooManyValidError(InvalidError):
     """The value passed more than expected validations."""
