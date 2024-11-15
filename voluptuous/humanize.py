@@ -26,7 +26,9 @@ def _format_single_error(data: typing.Any, error: Invalid, max_length: int) -> s
     return f"{error}: value was {value_str} at {path}"
 
 
-def _format_multiple_errors(data: typing.Any, errors: MultipleInvalid, max_length: int) -> str:
+def _format_multiple_errors(
+    data: typing.Any, errors: MultipleInvalid, max_length: int
+) -> str:
     error_messages = []
     for error in errors.errors:
         error_messages.append(_format_single_error(data, error, max_length))
