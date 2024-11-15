@@ -1,5 +1,5 @@
 import typing
-from voluptuous.error import Invalid, MultipleInvalid
+from voluptuous import Invalid, MultipleInvalid
 
 MAX_VALIDATION_ERROR_ITEM_LENGTH = 500
 
@@ -43,7 +43,9 @@ def _get_value_from_path(
     data: typing.Any, path: typing.List[typing.Union[str, int]]
 ) -> typing.Any:
     for key in path:
-        if isinstance(data, (dict, list)) and key in data:
+        if isinstance(data, dict) and key in data:
+            data = data[key]
+        elif isinstance(data, list) and isinstance(key, int) and 0 <= key < len(data):
             data = data[key]
         elif isinstance(key, str) and hasattr(data, key):
             data = getattr(data, key)
