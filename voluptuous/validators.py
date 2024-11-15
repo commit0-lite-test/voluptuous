@@ -6,29 +6,13 @@ import typing
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from voluptuous.error import (
-    BooleanInvalid,
-    CoerceInvalid,
-    ContainsInvalid,
-    DateInvalid,
-    DatetimeInvalid,
-    DirInvalid,
-    EmailInvalid,
-    ExactSequenceInvalid,
-    FalseInvalid,
-    FileInvalid,
-    InInvalid,
-    Invalid,
-    LengthInvalid,
-    MatchInvalid,
-    MultipleInvalid,
-    NotInInvalid,
-    PathInvalid,
-    RangeInvalid,
-    TrueInvalid,
-    TypeInvalid,
-    UrlInvalid,
+    AllInvalid, AnyInvalid, BooleanInvalid, CoerceInvalid, ContainsInvalid,
+    DateInvalid, DatetimeInvalid, DirInvalid, EmailInvalid, ExactSequenceInvalid,
+    FalseInvalid, FileInvalid, InInvalid, Invalid, LengthInvalid, MatchInvalid,
+    MultipleInvalid, NotEnoughValid, NotInInvalid, PathInvalid, RangeInvalid,
+    TooManyValid, TrueInvalid, TypeInvalid, UrlInvalid
 )
-from voluptuous.schema_builder import Schema, Schemable, message
+from voluptuous.schema_builder import Schema, Schemable, message, raises
 
 if typing.TYPE_CHECKING:
     from _typeshed import SupportsAllComparisons
@@ -68,7 +52,7 @@ def truth(f: typing.Callable) -> typing.Callable:
     """
 
     @wraps(f)
-    def wrapper(v):
+    def wrapper(v: typing.Any) -> typing.Any:
         t = f(v)
         if not t:
             raise ValueError
@@ -107,17 +91,17 @@ class Coerce(object):
         self.msg = msg
         self.type_name = type.__name__
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             return self.type(v)
         except (ValueError, TypeError, InvalidOperation):
-            msg = self.msg or "expected %s" % self.type_name
-            if not self.msg and Enum and issubclass(self.type, Enum):
-                msg += " or one of %s" % str([e.value for e in self.type])[1:-1]
+            msg = self.msg or f"expected {self.type_name}"
+            if not self.msg and Enum is not None and isinstance(self.type, type) and issubclass(self.type, Enum):
+                msg += f" or one of {', '.join(str(e.value) for e in self.type)}"
             raise CoerceInvalid(msg)
 
     def __repr__(self):
-        return "Coerce(%s, msg=%r)" % (self.type_name, self.msg)
+        return f"Coerce({self.type_name}, msg={self.msg!r})"
 
 
 @message("value was not true", cls=TrueInvalid)
@@ -330,12 +314,12 @@ class Match(object):
     def __init__(
         self, pattern: typing.Union[re.Pattern, str], msg: typing.Optional[str] = None
     ) -> None:
-        if isinstance(pattern, basestring):
+        if isinstance(pattern, str):
             pattern = re.compile(pattern)
         self.pattern = pattern
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> str:
         try:
             match = self.pattern.match(v)
         except TypeError:
@@ -343,12 +327,12 @@ class Match(object):
         if not match:
             raise MatchInvalid(
                 self.msg
-                or "does not match regular expression {}".format(self.pattern.pattern)
+                or f"does not match regular expression {self.pattern.pattern}"
             )
         return v
 
-    def __repr__(self):
-        return "Match(%r, msg=%r)" % (self.pattern.pattern, self.msg)
+    def __repr__(self) -> str:
+        return f"Match({self.pattern.pattern!r}, msg={self.msg!r})"
 
 
 class Replace(object):
@@ -366,21 +350,17 @@ class Replace(object):
         substitution: str,
         msg: typing.Optional[str] = None,
     ) -> None:
-        if isinstance(pattern, basestring):
+        if isinstance(pattern, str):
             pattern = re.compile(pattern)
         self.pattern = pattern
         self.substitution = substitution
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: str) -> str:
         return self.pattern.sub(self.substitution, v)
 
-    def __repr__(self):
-        return "Replace(%r, %r, msg=%r)" % (
-            self.pattern.pattern,
-            self.substitution,
-            self.msg,
-        )
+    def __repr__(self) -> str:
+        return f"Replace({self.pattern.pattern!r}, {self.substitution!r}, msg={self.msg!r})"
 
 
 @message("expected an email address", cls=EmailInvalid)
@@ -535,14 +515,15 @@ class Range(object):
     ...   s(20)
     >>> with raises(MultipleInvalid, 'value must be higher than 1'):
     ...   s(1)
-    >>> with raises(MultipleInvalid, 'value must be lower than 10'):
+    >>> with raises(MultipleInvalid,
+    ...             'value must be lower than 10'):
     ...   Schema(Range(max=10, max_included=False))(20)
     """
 
     def __init__(
         self,
-        min: SupportsAllComparisons | None = None,
-        max: SupportsAllComparisons | None = None,
+        min: typing.Optional[typing.Any] = None,
+        max: typing.Optional[typing.Any] = None,
         min_included: bool = True,
         max_included: bool = True,
         msg: typing.Optional[str] = None,
@@ -553,37 +534,35 @@ class Range(object):
         self.max_included = max_included
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             if self.min_included:
-                if self.min is not None and (not v >= self.min):
+                if self.min is not None and not v >= self.min:
                     raise RangeInvalid(
-                        self.msg or "value must be at least %s" % self.min
+                        self.msg or f"value must be at least {self.min}"
                     )
-            elif self.min is not None and (not v > self.min):
+            elif self.min is not None and not v > self.min:
                 raise RangeInvalid(
-                    self.msg or "value must be higher than %s" % self.min
+                    self.msg or f"value must be higher than {self.min}"
                 )
             if self.max_included:
-                if self.max is not None and (not v <= self.max):
+                if self.max is not None and not v <= self.max:
                     raise RangeInvalid(
-                        self.msg or "value must be at most %s" % self.max
+                        self.msg or f"value must be at most {self.max}"
                     )
-            elif self.max is not None and (not v < self.max):
-                raise RangeInvalid(self.msg or "value must be lower than %s" % self.max)
+            elif self.max is not None and not v < self.max:
+                raise RangeInvalid(self.msg or f"value must be lower than {self.max}")
             return v
         except TypeError:
             raise RangeInvalid(
                 self.msg or "invalid value or type (must have a partial ordering)"
             )
 
-    def __repr__(self):
-        return "Range(min=%r, max=%r, min_included=%r, max_included=%r, msg=%r)" % (
-            self.min,
-            self.max,
-            self.min_included,
-            self.max_included,
-            self.msg,
+    def __repr__(self) -> str:
+        return (
+            f"Range(min={self.min!r}, max={self.max!r}, "
+            f"min_included={self.min_included!r}, max_included={self.max_included!r}, "
+            f"msg={self.msg!r})"
         )
 
 
@@ -603,15 +582,15 @@ class Clamp(object):
 
     def __init__(
         self,
-        min: SupportsAllComparisons | None = None,
-        max: SupportsAllComparisons | None = None,
+        min: typing.Optional[typing.Any] = None,
+        max: typing.Optional[typing.Any] = None,
         msg: typing.Optional[str] = None,
     ) -> None:
         self.min = min
         self.max = max
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             if self.min is not None and v < self.min:
                 v = self.min
@@ -623,8 +602,8 @@ class Clamp(object):
                 self.msg or "invalid value or type (must have a partial ordering)"
             )
 
-    def __repr__(self):
-        return "Clamp(min=%s, max=%s)" % (self.min, self.max)
+    def __repr__(self) -> str:
+        return f"Clamp(min={self.min}, max={self.max})"
 
 
 class Length(object):
@@ -632,30 +611,30 @@ class Length(object):
 
     def __init__(
         self,
-        min: SupportsAllComparisons | None = None,
-        max: SupportsAllComparisons | None = None,
+        min: typing.Optional[int] = None,
+        max: typing.Optional[int] = None,
         msg: typing.Optional[str] = None,
     ) -> None:
         self.min = min
         self.max = max
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Sized) -> typing.Sized:
         try:
             if self.min is not None and len(v) < self.min:
                 raise LengthInvalid(
-                    self.msg or "length of value must be at least %s" % self.min
+                    self.msg or f"length of value must be at least {self.min}"
                 )
             if self.max is not None and len(v) > self.max:
                 raise LengthInvalid(
-                    self.msg or "length of value must be at most %s" % self.max
+                    self.msg or f"length of value must be at most {self.max}"
                 )
             return v
         except TypeError:
             raise RangeInvalid(self.msg or "invalid value or type")
 
-    def __repr__(self):
-        return "Length(min=%s, max=%s)" % (self.min, self.max)
+    def __repr__(self) -> str:
+        return f"Length(min={self.min}, max={self.max})"
 
 
 class Datetime(object):
@@ -669,17 +648,17 @@ class Datetime(object):
         self.format = format or self.DEFAULT_FORMAT
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: str) -> str:
         try:
             datetime.datetime.strptime(v, self.format)
         except (TypeError, ValueError):
             raise DatetimeInvalid(
-                self.msg or "value does not match expected format %s" % self.format
+                self.msg or f"value does not match expected format {self.format}"
             )
         return v
 
-    def __repr__(self):
-        return "Datetime(format=%s)" % self.format
+    def __repr__(self) -> str:
+        return f"Datetime(format={self.format!r})"
 
 
 class Date(Datetime):
@@ -687,17 +666,17 @@ class Date(Datetime):
 
     DEFAULT_FORMAT = "%Y-%m-%d"
 
-    def __call__(self, v):
+    def __call__(self, v: str) -> str:
         try:
             datetime.datetime.strptime(v, self.format)
         except (TypeError, ValueError):
             raise DateInvalid(
-                self.msg or "value does not match expected format %s" % self.format
+                self.msg or f"value does not match expected format {self.format}"
             )
         return v
 
-    def __repr__(self):
-        return "Date(format=%s)" % self.format
+    def __repr__(self) -> str:
+        return f"Date(format={self.format!r})"
 
 
 class In(object):
@@ -709,7 +688,7 @@ class In(object):
         self.container = container
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             check = v not in self.container
         except TypeError:
@@ -726,8 +705,8 @@ class In(object):
                 )
         return v
 
-    def __repr__(self):
-        return "In(%s)" % (self.container,)
+    def __repr__(self) -> str:
+        return f"In({self.container!r})"
 
 
 class NotIn(object):
@@ -739,7 +718,7 @@ class NotIn(object):
         self.container = container
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             check = v in self.container
         except TypeError:
@@ -756,8 +735,8 @@ class NotIn(object):
                 )
         return v
 
-    def __repr__(self):
-        return "NotIn(%s)" % (self.container,)
+    def __repr__(self) -> str:
+        return f"NotIn({self.container!r})"
 
 
 class Contains(object):
@@ -770,11 +749,11 @@ class Contains(object):
     ...   s([3, 2])
     """
 
-    def __init__(self, item, msg: typing.Optional[str] = None) -> None:
+    def __init__(self, item: typing.Any, msg: typing.Optional[str] = None) -> None:
         self.item = item
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Sequence) -> typing.Sequence:
         try:
             check = self.item not in v
         except TypeError:
@@ -783,8 +762,8 @@ class Contains(object):
             raise ContainsInvalid(self.msg or "value is not allowed")
         return v
 
-    def __repr__(self):
-        return "Contains(%s)" % (self.item,)
+    def __repr__(self) -> str:
+        return f"Contains({self.item!r})"
 
 
 class ExactSequence(object):
@@ -807,13 +786,13 @@ class ExactSequence(object):
         self,
         validators: typing.Iterable[Schemable],
         msg: typing.Optional[str] = None,
-        **kwargs,
+        **kwargs: typing.Any,
     ) -> None:
         self.validators = validators
         self.msg = msg
         self._schemas = [Schema(val, **kwargs) for val in validators]
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Sequence) -> typing.Sequence:
         if not isinstance(v, (list, tuple)) or len(v) != len(self._schemas):
             raise ExactSequenceInvalid(self.msg)
         try:
@@ -822,8 +801,8 @@ class ExactSequence(object):
             raise e if self.msg is None else ExactSequenceInvalid(self.msg)
         return v
 
-    def __repr__(self):
-        return "ExactSequence([%s])" % ", ".join((repr(v) for v in self.validators))
+    def __repr__(self) -> str:
+        return f"ExactSequence([{', '.join(repr(v) for v in self.validators)}])"
 
 
 class Unique(object):
@@ -855,18 +834,18 @@ class Unique(object):
     def __init__(self, msg: typing.Optional[str] = None) -> None:
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Iterable) -> typing.Iterable:
         try:
             set_v = set(v)
         except TypeError as e:
-            raise TypeInvalid(self.msg or "contains unhashable elements: {0}".format(e))
+            raise TypeInvalid(self.msg or f"contains unhashable elements: {e}")
         if len(set_v) != len(v):
             seen = set()
-            dupes = list(set((x for x in v if x in seen or seen.add(x))))
-            raise Invalid(self.msg or "contains duplicate items: {0}".format(dupes))
+            dupes = list(set(x for x in v if x in seen or seen.add(x)))
+            raise Invalid(self.msg or f"contains duplicate items: {dupes}")
         return v
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Unique()"
 
 
@@ -886,20 +865,20 @@ class Equal(object):
     ...     s('foo')
     """
 
-    def __init__(self, target, msg: typing.Optional[str] = None) -> None:
+    def __init__(self, target: typing.Any, msg: typing.Optional[str] = None) -> None:
         self.target = target
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         if v != self.target:
             raise Invalid(
                 self.msg
-                or "Values are not equal: value:{} != target:{}".format(v, self.target)
+                or f"Values are not equal: value:{v} != target:{self.target}"
             )
         return v
 
-    def __repr__(self):
-        return "Equal({})".format(self.target)
+    def __repr__(self) -> str:
+        return f"Equal({self.target!r})"
 
 
 class Unordered(object):
@@ -921,21 +900,19 @@ class Unordered(object):
         self,
         validators: typing.Iterable[Schemable],
         msg: typing.Optional[str] = None,
-        **kwargs,
+        **kwargs: typing.Any,
     ) -> None:
         self.validators = validators
         self.msg = msg
         self._schemas = [Schema(val, **kwargs) for val in validators]
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Sequence) -> typing.Sequence:
         if not isinstance(v, (list, tuple)):
-            raise Invalid(self.msg or "Value {} is not sequence!".format(v))
+            raise Invalid(self.msg or f"Value {v} is not sequence!")
         if len(v) != len(self._schemas):
             raise Invalid(
                 self.msg
-                or "List lengths differ, value:{} != target:{}".format(
-                    len(v), len(self._schemas)
-                )
+                or f"List lengths differ, value:{len(v)} != target:{len(self._schemas)}"
             )
         consumed = set()
         missing = []
@@ -958,26 +935,22 @@ class Unordered(object):
             el = missing[0]
             raise Invalid(
                 self.msg
-                or "Element #{} ({}) is not valid against any validator".format(
-                    el[0], el[1]
-                )
+                or f"Element #{el[0]} ({el[1]}) is not valid against any validator"
             )
         elif missing:
             raise MultipleInvalid(
                 [
                     Invalid(
                         self.msg
-                        or "Element #{} ({}) is not valid against any validator".format(
-                            el[0], el[1]
-                        )
+                        or f"Element #{el[0]} ({el[1]}) is not valid against any validator"
                     )
                     for el in missing
                 ]
             )
         return v
 
-    def __repr__(self):
-        return "Unordered([{}])".format(", ".join((repr(v) for v in self.validators)))
+    def __repr__(self) -> str:
+        return f"Unordered([{', '.join(repr(v) for v in self.validators)}])"
 
 
 class Number(object):
@@ -1006,8 +979,9 @@ class Number(object):
         self.msg = msg
         self.yield_decimal = yield_decimal
 
-    def __call__(self, v):
-        """:param v: is a number enclosed with string
+    def __call__(self, v: str) -> typing.Union[str, Decimal]:
+        """
+        :param v: is a number enclosed with string
         :return: Decimal number
         """
         precision, scale, decimal_num = self._get_precision_scale(v)
@@ -1019,30 +993,26 @@ class Number(object):
         ):
             raise Invalid(
                 self.msg
-                or "Precision must be equal to %s, and Scale must be equal to %s"
-                % (self.precision, self.scale)
+                or f"Precision must be equal to {self.precision}, and Scale must be equal to {self.scale}"
             )
         else:
             if self.precision is not None and precision != self.precision:
                 raise Invalid(
-                    self.msg or "Precision must be equal to %s" % self.precision
+                    self.msg or f"Precision must be equal to {self.precision}"
                 )
             if self.scale is not None and scale != self.scale:
-                raise Invalid(self.msg or "Scale must be equal to %s" % self.scale)
+                raise Invalid(self.msg or f"Scale must be equal to {self.scale}")
         if self.yield_decimal:
             return decimal_num
         else:
             return v
 
-    def __repr__(self):
-        return "Number(precision=%s, scale=%s, msg=%s)" % (
-            self.precision,
-            self.scale,
-            self.msg,
-        )
+    def __repr__(self) -> str:
+        return f"Number(precision={self.precision}, scale={self.scale}, msg={self.msg!r})"
 
-    def _get_precision_scale(self, number) -> typing.Tuple[int, int, Decimal]:
-        """:param number:
+    def _get_precision_scale(self, number: str) -> typing.Tuple[int, int, Decimal]:
+        """
+        :param number:
         :return: tuple(precision, scale, decimal_number)
         """
         try:
@@ -1091,20 +1061,18 @@ class SomeOf(_WithSubValidators):
         validators: typing.List[Schemable],
         min_valid: typing.Optional[int] = None,
         max_valid: typing.Optional[int] = None,
-        **kwargs,
+        **kwargs: typing.Any,
     ) -> None:
         assert min_valid is not None or max_valid is not None, (
-            'when using "%s" you should specify at least one of min_valid and max_valid'
-            % (type(self).__name__,)
+            f'when using "{type(self).__name__}" you should specify at least one of min_valid and max_valid'
         )
         self.min_valid = min_valid or 0
         self.max_valid = max_valid or len(validators)
         super(SomeOf, self).__init__(*validators, **kwargs)
 
-    def __repr__(self):
-        return "SomeOf(min_valid=%s, validators=[%s], max_valid=%s, msg=%r)" % (
-            self.min_valid,
-            ", ".join((repr(v) for v in self.validators)),
-            self.max_valid,
-            self.msg,
+    def __repr__(self) -> str:
+        return (
+            f"SomeOf(min_valid={self.min_valid}, "
+            f"validators=[{', '.join(repr(v) for v in self.validators)}], "
+            f"max_valid={self.max_valid}, msg={self.msg!r})"
         )
