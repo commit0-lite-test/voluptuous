@@ -6,16 +6,32 @@ import typing
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from voluptuous.error import (
-    AllInvalid, AnyInvalid, BooleanInvalid, CoerceInvalid, ContainsInvalid,
-    DateInvalid, DatetimeInvalid, DirInvalid, EmailInvalid, ExactSequenceInvalid,
-    FalseInvalid, FileInvalid, InInvalid, Invalid, LengthInvalid, MatchInvalid,
-    MultipleInvalid, NotEnoughValid, NotInInvalid, PathInvalid, RangeInvalid,
-    TooManyValid, TrueInvalid, TypeInvalid, UrlInvalid
+    BooleanInvalid,
+    CoerceInvalid,
+    ContainsInvalid,
+    DateInvalid,
+    DatetimeInvalid,
+    DirInvalid,
+    EmailInvalid,
+    ExactSequenceInvalid,
+    FalseInvalid,
+    FileInvalid,
+    InInvalid,
+    Invalid,
+    LengthInvalid,
+    MatchInvalid,
+    MultipleInvalid,
+    NotInInvalid,
+    PathInvalid,
+    RangeInvalid,
+    TrueInvalid,
+    TypeInvalid,
+    UrlInvalid,
 )
-from voluptuous.schema_builder import Schema, Schemable, message, raises
+from voluptuous.schema_builder import Schema, Schemable, message
 
 if typing.TYPE_CHECKING:
-    from _typeshed import SupportsAllComparisons
+    pass
 Enum: typing.Union[type, None]
 try:
     from enum import Enum
@@ -96,7 +112,12 @@ class Coerce(object):
             return self.type(v)
         except (ValueError, TypeError, InvalidOperation):
             msg = self.msg or f"expected {self.type_name}"
-            if not self.msg and Enum is not None and isinstance(self.type, type) and issubclass(self.type, Enum):
+            if (
+                not self.msg
+                and Enum is not None
+                and isinstance(self.type, type)
+                and issubclass(self.type, Enum)
+            ):
                 msg += f" or one of {', '.join(str(e.value) for e in self.type)}"
             raise CoerceInvalid(msg)
 
@@ -198,7 +219,7 @@ class _WithSubValidators(object):
         msg: typing.Optional[str] = None,
         required: bool = False,
         discriminant: typing.Optional[typing.Callable] = None,
-        **kwargs: typing.Any
+        **kwargs: typing.Any,
     ) -> None:
         self.validators = validators
         self.msg = msg
@@ -333,8 +354,7 @@ class Match(object):
             raise MatchInvalid("expected string or buffer")
         if not match:
             raise MatchInvalid(
-                self.msg
-                or f"does not match regular expression {self.pattern.pattern}"
+                self.msg or f"does not match regular expression {self.pattern.pattern}"
             )
         return v
 
@@ -481,7 +501,9 @@ def PathExists(v: typing.Any) -> typing.Any:
     pass
 
 
-def Maybe(validator: Schemable, msg: typing.Optional[str] = None) -> typing.Callable[[typing.Any], typing.Any]:
+def Maybe(
+    validator: Schemable, msg: typing.Optional[str] = None
+) -> typing.Callable[[typing.Any], typing.Any]:
     """Validate that the object matches given validator or is None.
 
     :raises Invalid: If the value does not match the given validator and is not
@@ -545,18 +567,12 @@ class Range(object):
         try:
             if self.min_included:
                 if self.min is not None and not v >= self.min:
-                    raise RangeInvalid(
-                        self.msg or f"value must be at least {self.min}"
-                    )
+                    raise RangeInvalid(self.msg or f"value must be at least {self.min}")
             elif self.min is not None and not v > self.min:
-                raise RangeInvalid(
-                    self.msg or f"value must be higher than {self.min}"
-                )
+                raise RangeInvalid(self.msg or f"value must be higher than {self.min}")
             if self.max_included:
                 if self.max is not None and not v <= self.max:
-                    raise RangeInvalid(
-                        self.msg or f"value must be at most {self.max}"
-                    )
+                    raise RangeInvalid(self.msg or f"value must be at most {self.max}")
             elif self.max is not None and not v < self.max:
                 raise RangeInvalid(self.msg or f"value must be lower than {self.max}")
             return v
@@ -879,8 +895,7 @@ class Equal(object):
     def __call__(self, v: typing.Any) -> typing.Any:
         if v != self.target:
             raise Invalid(
-                self.msg
-                or f"Values are not equal: value:{v} != target:{self.target}"
+                self.msg or f"Values are not equal: value:{v} != target:{self.target}"
             )
         return v
 
@@ -987,8 +1002,7 @@ class Number(object):
         self.yield_decimal = yield_decimal
 
     def __call__(self, v: str) -> typing.Union[str, Decimal]:
-        """
-        :param v: is a number enclosed with string
+        """:param v: is a number enclosed with string
         :return: Decimal number
         """
         precision, scale, decimal_num = self._get_precision_scale(v)
@@ -1015,11 +1029,12 @@ class Number(object):
             return v
 
     def __repr__(self) -> str:
-        return f"Number(precision={self.precision}, scale={self.scale}, msg={self.msg!r})"
+        return (
+            f"Number(precision={self.precision}, scale={self.scale}, msg={self.msg!r})"
+        )
 
     def _get_precision_scale(self, number: str) -> typing.Tuple[int, int, Decimal]:
-        """
-        :param number:
+        """:param number:
         :return: tuple(precision, scale, decimal_number)
         """
         try:
@@ -1070,9 +1085,9 @@ class SomeOf(_WithSubValidators):
         max_valid: typing.Optional[int] = None,
         **kwargs: typing.Any,
     ) -> None:
-        assert min_valid is not None or max_valid is not None, (
-            f'when using "{type(self).__name__}" you should specify at least one of min_valid and max_valid'
-        )
+        assert (
+            min_valid is not None or max_valid is not None
+        ), f'when using "{type(self).__name__}" you should specify at least one of min_valid and max_valid'
         self.min_valid = min_valid or 0
         self.max_valid = max_valid or len(validators)
         super(SomeOf, self).__init__(*validators, **kwargs)
