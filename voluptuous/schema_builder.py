@@ -1,10 +1,13 @@
 from __future__ import annotations
-import collections
+import collections.abc
 import inspect
 import typing
 from functools import cache, wraps
 from voluptuous import error as er
 from voluptuous.error import Error
+
+def default_factory(default):
+    return lambda: default() if callable(default) else default
 
 PREVENT_EXTRA = 0
 ALLOW_EXTRA = 1
@@ -23,7 +26,7 @@ UNDEFINED = Undefined()
 DefaultFactory = typing.Union[Undefined, typing.Callable[[], typing.Any]]
 
 
-def Extra(_) -> None:
+def Extra(_: typing.Any) -> None:
     """Allow keys in the data that are not present in the schema."""
     pass
 
@@ -103,7 +106,7 @@ class Schema(object):
         self._compiled = self._compile(schema)
 
     @classmethod
-    def infer(cls, data, **kwargs) -> Schema:
+    def infer(cls, data: typing.Any, **kwargs: typing.Any) -> Schema:
         """Create a Schema from concrete data (e.g. an API response).
 
         For example, this will take a dict like:
@@ -142,12 +145,12 @@ class Schema(object):
         else:
             return object
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, Schema):
             return False
         return other.schema == self.schema
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         return not self == other
 
     def __str__(self):
@@ -161,7 +164,7 @@ class Schema(object):
             id(self),
         )
 
-    def __call__(self, data):
+    def __call__(self, data: typing.Any) -> typing.Any:
         """Validate data against this schema."""
         try:
             return self._compiled([], data)
@@ -170,10 +173,10 @@ class Schema(object):
         except er.Invalid as e:
             raise er.MultipleInvalid([e])
 
-    def _compile_mapping(self, schema, invalid_msg=None):
+    def _compile_mapping(self, schema: typing.Any, invalid_msg: typing.Optional[str] = None) -> typing.Callable:
         """Create validator for given mapping."""
 
-        def validate_mapping(path, iterable, value):
+        def validate_mapping(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Dict[typing.Any, typing.Any]:
             if not isinstance(value, dict):
                 raise er.DictInvalid(invalid_msg or "expected a dictionary")
 
@@ -207,7 +210,7 @@ class Schema(object):
 
         return validate_mapping
 
-    def _compile_object(self, schema):
+    def _compile_object(self, schema: typing.Any) -> typing.Callable:
         """Validate an object.
 
         Has the same behavior as dictionary validator but work with object
@@ -226,7 +229,7 @@ class Schema(object):
 
         """
 
-        def validate_object(path, iterable, value):
+        def validate_object(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Any:
             if not isinstance(value, schema.cls):
                 raise er.ObjectInvalid(
                     "expected an instance of %s" % schema.cls.__name__
@@ -255,7 +258,7 @@ class Schema(object):
 
         return validate_object
 
-    def _compile_dict(self, schema):
+    def _compile_dict(self, schema: typing.Any) -> typing.Callable:
         """Validate a dictionary.
 
         A dictionary schema can contain a set of values, or at most one
@@ -332,7 +335,7 @@ class Schema(object):
 
         """
 
-        def validate_dict(path, iterable, value):
+        def validate_dict(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Dict[typing.Any, typing.Any]:
             if not isinstance(value, dict):
                 raise er.DictInvalid("expected a dictionary")
 
@@ -380,7 +383,7 @@ class Schema(object):
 
         return validate_dict
 
-    def _compile_sequence(self, schema, seq_type):
+    def _compile_sequence(self, schema: typing.Any, seq_type: typing.Type) -> typing.Callable:
         """Validate a sequence type.
 
         This is a sequence of valid values or validators tried in order.
@@ -394,7 +397,7 @@ class Schema(object):
         [1]
         """
 
-        def validate_sequence(path, iterable, value):
+        def validate_sequence(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Any:
             if not isinstance(value, seq_type):
                 raise er.SequenceTypeInvalid("expected a %s" % seq_type.__name__)
 
@@ -424,7 +427,7 @@ class Schema(object):
 
         return validate_sequence
 
-    def _compile_tuple(self, schema):
+    def _compile_tuple(self, schema: typing.Any) -> typing.Callable:
         """Validate a tuple.
 
         A tuple is a sequence of valid values or validators tried in order.
@@ -439,7 +442,7 @@ class Schema(object):
         """
         return self._compile_sequence(schema, tuple)
 
-    def _compile_list(self, schema):
+    def _compile_list(self, schema: typing.Any) -> typing.Callable:
         """Validate a list.
 
         A list is a sequence of valid values or validators tried in order.
@@ -454,7 +457,7 @@ class Schema(object):
         """
         return self._compile_sequence(schema, list)
 
-    def _compile_set(self, schema):
+    def _compile_set(self, schema: typing.Any) -> typing.Callable:
         """Validate a set.
 
         A set is an unordered collection of unique elements.
@@ -468,7 +471,7 @@ class Schema(object):
         ...   validator(set(['a']))
         """
 
-        def validate_set(path, iterable, value):
+        def validate_set(path: typing.List[typing.Any], iterable: typing.Any, value: typing.Any) -> typing.Set[typing.Any]:
             if not isinstance(value, set):
                 raise er.Invalid("expected a set")
 
@@ -525,7 +528,7 @@ class Schema(object):
         )
 
 
-def _compile_scalar(schema):
+def _compile_scalar(schema: typing.Any) -> typing.Callable:
     """A scalar value.
 
     The schema can either be a value or a type.
@@ -546,7 +549,7 @@ def _compile_scalar(schema):
     """
     if isinstance(schema, type):
 
-        def validate_instance(path, _, value):
+        def validate_instance(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
             if isinstance(value, schema):
                 return value
             else:
@@ -556,7 +559,7 @@ def _compile_scalar(schema):
 
     elif callable(schema):
 
-        def validate_callable(path, _, value):
+        def validate_callable(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
             try:
                 return schema(value)
             except ValueError:
@@ -570,7 +573,7 @@ def _compile_scalar(schema):
 
     else:
 
-        def validate_value(path, _, value):
+        def validate_value(path: typing.List[typing.Any], _: typing.Any, value: typing.Any) -> typing.Any:
             if value != schema:
                 raise er.Invalid(f"expected {schema!r}")
             return value
@@ -578,10 +581,10 @@ def _compile_scalar(schema):
         return validate_value
 
 
-def _compile_itemsort():
+def _compile_itemsort() -> typing.Callable:
     """Return sort function of mappings"""
 
-    def item_sort(item):
+    def item_sort(item: typing.Tuple[typing.Any, typing.Any]) -> typing.Tuple[bool, typing.Any]:
         key, _ = item
         if isinstance(key, Marker):
             return not isinstance(key, Required), str(key)
@@ -593,12 +596,12 @@ def _compile_itemsort():
 _sort_item = _compile_itemsort()
 
 
-def _iterate_mapping_candidates(schema):
+def _iterate_mapping_candidates(schema: typing.Dict[typing.Any, typing.Any]) -> typing.List[typing.Tuple[typing.Any, typing.Any]]:
     """Iterate over schema in a meaningful order."""
     return sorted(schema.items(), key=_sort_item)
 
 
-def _iterate_object(obj):
+def _iterate_object(obj: typing.Any) -> typing.Iterable[typing.Tuple[str, typing.Any]]:
     """Return iterator over object attributes. Respect objects with
     defined __slots__.
 
@@ -652,7 +655,7 @@ class Msg(object):
         self.msg = msg
         self.cls = cls
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         try:
             return self.schema(v)
         except er.Invalid as e:
@@ -716,15 +719,15 @@ class Marker(object):
     def __repr__(self):
         return repr(self.schema)
 
-    def __lt__(self, other):
+    def __lt__(self, other: typing.Any) -> bool:
         if isinstance(other, Marker):
             return self.schema < other.schema
         return self.schema < other
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return self.schema == other
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         return not self.schema == other
 
 
@@ -915,7 +918,7 @@ class Remove(Marker):
         super().__init__(schema_, msg, description)
         self.__hash__ = cache(lambda: object.__hash__(self))
 
-    def __call__(self, schema: Schemable):
+    def __call__(self, schema: Schemable) -> typing.Type[Remove]:
         super(Remove, self).__call__(schema)
         return self.__class__
 
@@ -972,7 +975,7 @@ def message(
     return decorator
 
 
-def _args_to_dict(func, args):
+def _args_to_dict(func: typing.Callable, args: typing.Tuple[typing.Any, ...]) -> typing.Dict[str, typing.Any]:
     """Returns argument names as values as key-value pairs."""
     sig = inspect.signature(func)
     return {
@@ -983,7 +986,7 @@ def _args_to_dict(func, args):
     }
 
 
-def _merge_args_with_kwargs(args_dict, kwargs_dict):
+def _merge_args_with_kwargs(args_dict: typing.Dict[str, typing.Any], kwargs_dict: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
     """Merge args with kwargs."""
     ret = args_dict.copy()
     ret.update(kwargs_dict)
