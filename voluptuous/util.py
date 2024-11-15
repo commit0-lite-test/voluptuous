@@ -1,6 +1,8 @@
 import typing
-from voluptuous.error import LiteralInvalid, TypeInvalid
-from voluptuous.schema_builder import default_factory
+from voluptuous import validators
+from voluptuous.error import Invalid, LiteralInvalid, TypeInvalid
+from voluptuous.schema_builder import DefaultFactory
+from voluptuous.schema_builder import Schema, default_factory, raises
 
 __author__ = "tusharmakkar08"
 
@@ -66,17 +68,18 @@ class DefaultTo(object):
     []
     """
 
-    def __init__(self, default_value, msg: typing.Optional[str] = None) -> None:
+    def __init__(self, default_value: typing.Any, msg: typing.Optional[str] = None) -> None:
         self.default_value = default_factory(default_value)
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
+        """Return the default value if v is None, otherwise return v."""
         if v is None:
             v = self.default_value()
         return v
 
-    def __repr__(self):
-        return "DefaultTo(%s)" % (self.default_value(),)
+    def __repr__(self) -> str:
+        return f"DefaultTo({self.default_value()})"
 
 
 class SetTo(object):
@@ -89,14 +92,15 @@ class SetTo(object):
     42
     """
 
-    def __init__(self, value) -> None:
+    def __init__(self, value: typing.Any) -> None:
         self.value = default_factory(value)
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
+        """Return the set value, ignoring the input."""
         return self.value()
 
-    def __repr__(self):
-        return "SetTo(%s)" % (self.value(),)
+    def __repr__(self) -> str:
+        return f"SetTo({self.value()})"
 
 
 class Set(object):
@@ -114,29 +118,30 @@ class Set(object):
     def __init__(self, msg: typing.Optional[str] = None) -> None:
         self.msg = msg
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> set:
+        """Convert the input to a set."""
         try:
             set_v = set(v)
         except Exception as e:
-            raise TypeInvalid(self.msg or "cannot be presented as set: {0}".format(e))
+            raise TypeInvalid(self.msg or f"cannot be presented as set: {e}")
         return set_v
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Set()"
 
 
 class Literal(object):
-    def __init__(self, lit) -> None:
+    def __init__(self, lit: typing.Any) -> None:
         self.lit = lit
 
-    def __call__(self, value, msg: typing.Optional[str] = None):
+    def __call__(self, value: typing.Any, msg: typing.Optional[str] = None) -> typing.Any:
+        """Check if the value matches the literal."""
         if self.lit != value:
-            raise LiteralInvalid(msg or "%s not match for %s" % (value, self.lit))
-        else:
-            return self.lit
+            raise LiteralInvalid(msg or f"{value} not match for {self.lit}")
+        return self.lit
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.lit)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.lit)
