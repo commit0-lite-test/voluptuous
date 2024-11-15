@@ -44,7 +44,9 @@ class InvalidError(Error):
 
 
 class MultipleInvalid(InvalidError):
-    def __init__(self, errors: typing.Optional[typing.List[InvalidError]] = None) -> None:
+    def __init__(
+        self, errors: typing.Optional[typing.List[InvalidError]] = None
+    ) -> None:
         super().__init__("Multiple errors")
         self.errors = errors[:] if errors else []
 
