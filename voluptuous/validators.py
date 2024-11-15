@@ -106,7 +106,7 @@ class Coerce(object):
 
 @message("value was not true", cls=TrueInvalid)
 @truth
-def IsTrue(v):
+def IsTrue(v: typing.Any) -> bool:
     """Assert that a value is true, in the Python sense.
 
     >>> validate = Schema(IsTrue())
@@ -132,7 +132,7 @@ def IsTrue(v):
 
 
 @message("value was not false", cls=FalseInvalid)
-def IsFalse(v):
+def IsFalse(v: typing.Any) -> typing.Any:
     """Assert that a value is false, in the Python sense.
 
     (see :func:`IsTrue` for more detail)
@@ -154,7 +154,7 @@ def IsFalse(v):
 
 
 @message("expected boolean", cls=BooleanInvalid)
-def Boolean(v):
+def Boolean(v: typing.Any) -> bool:
     """Convert human-readable boolean values to a bool.
 
     Accepted values are 1, true, yes, on, enable, and their negatives.
@@ -193,7 +193,12 @@ class _WithSubValidators(object):
     """
 
     def __init__(
-        self, *validators, msg=None, required=False, discriminant=None, **kwargs
+        self,
+        *validators: Schemable,
+        msg: typing.Optional[str] = None,
+        required: bool = False,
+        discriminant: typing.Optional[typing.Callable] = None,
+        **kwargs: typing.Any
     ) -> None:
         self.validators = validators
         self.msg = msg
@@ -201,7 +206,7 @@ class _WithSubValidators(object):
         self.discriminant = discriminant
 
     def __voluptuous_compile__(self, schema: Schema) -> typing.Callable:
-        self._compiled = []
+        self._compiled: typing.List[typing.Callable] = []
         old_required = schema.required
         self.schema = schema
         for v in self.validators:
@@ -210,15 +215,17 @@ class _WithSubValidators(object):
         schema.required = old_required
         return self._run
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
         return self._exec((Schema(val) for val in self.validators), v)
 
-    def __repr__(self):
-        return "%s(%s, msg=%r)" % (
-            self.__class__.__name__,
-            ", ".join((repr(v) for v in self.validators)),
-            self.msg,
-        )
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(repr(v) for v in self.validators)}, msg={self.msg!r})"
+
+    def _run(self, v: typing.Any) -> typing.Any:
+        raise NotImplementedError
+
+    def _exec(self, schemas: typing.Iterable[Schema], v: typing.Any) -> typing.Any:
+        raise NotImplementedError
 
 
 class Any(_WithSubValidators):
@@ -364,7 +371,7 @@ class Replace(object):
 
 
 @message("expected an email address", cls=EmailInvalid)
-def Email(v):
+def Email(v: typing.Any) -> str:
     """Verify that the value is an email address or not.
 
     >>> s = Schema(Email())
@@ -390,7 +397,7 @@ def Email(v):
 
 
 @message("expected a fully qualified domain name URL", cls=UrlInvalid)
-def FqdnUrl(v):
+def FqdnUrl(v: typing.Any) -> str:
     """Verify that the value is a fully qualified domain name URL.
 
     >>> s = Schema(FqdnUrl())
@@ -411,7 +418,7 @@ def FqdnUrl(v):
 
 
 @message("expected a URL", cls=UrlInvalid)
-def Url(v):
+def Url(v: typing.Any) -> str:
     """Verify that the value is a URL.
 
     >>> s = Schema(Url())
@@ -433,7 +440,7 @@ def Url(v):
 
 @message("Not a file", cls=FileInvalid)
 @truth
-def IsFile(v):
+def IsFile(v: typing.Any) -> typing.Any:
     """Verify the file exists.
 
     >>> os.path.basename(IsFile()(__file__)).startswith('validators.py')
@@ -448,7 +455,7 @@ def IsFile(v):
 
 @message("Not a directory", cls=DirInvalid)
 @truth
-def IsDir(v):
+def IsDir(v: typing.Any) -> typing.Any:
     """Verify the directory exists.
 
     >>> IsDir()('/')
@@ -461,7 +468,7 @@ def IsDir(v):
 
 @message("path does not exist", cls=PathInvalid)
 @truth
-def PathExists(v):
+def PathExists(v: typing.Any) -> typing.Any:
     """Verify the path exists, regardless of its type.
 
     >>> os.path.basename(PathExists()(__file__)).startswith('validators.py')
@@ -474,7 +481,7 @@ def PathExists(v):
     pass
 
 
-def Maybe(validator: Schemable, msg: typing.Optional[str] = None):
+def Maybe(validator: Schemable, msg: typing.Optional[str] = None) -> typing.Callable[[typing.Any], typing.Any]:
     """Validate that the object matches given validator or is None.
 
     :raises Invalid: If the value does not match the given validator and is not
@@ -490,7 +497,7 @@ def Maybe(validator: Schemable, msg: typing.Optional[str] = None):
     schema = Schema(validator)
 
     @wraps(validator)
-    def f(v):
+    def f(v: typing.Any) -> typing.Any:
         if v is None:
             return v
         return schema(v)
