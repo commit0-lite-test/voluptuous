@@ -9,7 +9,7 @@ class SchemaError(Error):
     """An error was encountered in the schema."""
 
 
-class Invalid(Error):
+class InvalidError(Error):
     """The data was invalid.
 
     :attr msg: The error message.
@@ -31,6 +31,10 @@ class Invalid(Error):
         self._error_message = error_message or message
         self.error_type = error_type
 
+    @property
+    def path(self) -> typing.List[typing.Hashable]:
+        return self._path
+
     def __str__(self) -> str:
         path = " @ data[%s]" % "][".join(map(repr, self.path)) if self.path else ""
         output = Exception.__str__(self)
@@ -39,18 +43,19 @@ class Invalid(Error):
         return output + path
 
 
-class MultipleInvalid(Invalid):
-    def __init__(self, errors: typing.Optional[typing.List[Invalid]] = None) -> None:
+class MultipleInvalid(InvalidError):
+    def __init__(self, errors: typing.Optional[typing.List[InvalidError]] = None) -> None:
+        super().__init__("Multiple errors")
         self.errors = errors[:] if errors else []
 
     def __repr__(self) -> str:
         return "MultipleInvalid(%r)" % self.errors
 
     def __str__(self) -> str:
-        return str(self.errors[0])
+        return str(self.errors[0]) if self.errors else "No errors"
 
 
-class RequiredFieldInvalid(Invalid):
+class RequiredFieldInvalid(InvalidError):
     """Required field was missing."""
 
 
