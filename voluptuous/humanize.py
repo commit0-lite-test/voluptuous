@@ -1,10 +1,14 @@
 import typing
 from voluptuous import Invalid, MultipleInvalid
-from voluptuous.error import Error
-from voluptuous.schema_builder import Schema
+
 MAX_VALIDATION_ERROR_ITEM_LENGTH = 500
 
-def humanize_error(data, validation_error: Invalid, max_sub_error_length: int=MAX_VALIDATION_ERROR_ITEM_LENGTH) -> str:
+
+def humanize_error(
+    data,
+    validation_error: Invalid,
+    max_sub_error_length: int = MAX_VALIDATION_ERROR_ITEM_LENGTH,
+) -> str:
     """Provide a more helpful + complete validation error message than that provided automatically
     Invalid and MultipleInvalid do not include the offending value in error messages,
     and MultipleInvalid.__str__ only provides the first error.
@@ -14,11 +18,13 @@ def humanize_error(data, validation_error: Invalid, max_sub_error_length: int=MA
     else:
         return _format_single_error(data, validation_error, max_sub_error_length)
 
+
 def _format_single_error(data, error: Invalid, max_length: int) -> str:
     path = _get_path_string(error.path)
     value = _get_value_from_path(data, error.path)
     value_str = _truncate_value(repr(value), max_length)
     return f"{error}: value was {value_str} at {path}"
+
 
 def _format_multiple_errors(data, errors: MultipleInvalid, max_length: int) -> str:
     error_messages = []
@@ -26,10 +32,14 @@ def _format_multiple_errors(data, errors: MultipleInvalid, max_length: int) -> s
         error_messages.append(_format_single_error(data, error, max_length))
     return "\n".join(error_messages)
 
+
 def _get_path_string(path: typing.List[typing.Hashable]) -> str:
     return ".".join(map(str, path)) if path else "top level"
 
-def _get_value_from_path(data: typing.Any, path: typing.List[typing.Hashable]) -> typing.Any:
+
+def _get_value_from_path(
+    data: typing.Any, path: typing.List[typing.Hashable]
+) -> typing.Any:
     for key in path:
         if isinstance(data, (dict, list)) and key in data:
             data = data[key]
@@ -39,7 +49,8 @@ def _get_value_from_path(data: typing.Any, path: typing.List[typing.Hashable]) -
             return "<unavailable>"
     return data
 
+
 def _truncate_value(value: str, max_length: int) -> str:
     if len(value) <= max_length:
         return value
-    return value[:max_length - 3] + "..."
+    return value[: max_length - 3] + "..."
