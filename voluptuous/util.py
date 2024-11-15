@@ -1,8 +1,6 @@
 import typing
-from voluptuous import validators
-from voluptuous.error import Invalid, LiteralInvalid, TypeInvalid
-from voluptuous.schema_builder import DefaultFactory
-from voluptuous.schema_builder import Schema, default_factory, raises
+from voluptuous.error import LiteralInvalid, TypeInvalid
+from voluptuous.schema_builder import default_factory
 
 __author__ = "tusharmakkar08"
 
@@ -68,7 +66,9 @@ class DefaultTo(object):
     []
     """
 
-    def __init__(self, default_value: typing.Any, msg: typing.Optional[str] = None) -> None:
+    def __init__(
+        self, default_value: typing.Any, msg: typing.Optional[str] = None
+    ) -> None:
         self.default_value = default_factory(default_value)
         self.msg = msg
 
@@ -134,7 +134,9 @@ class Literal(object):
     def __init__(self, lit: typing.Any) -> None:
         self.lit = lit
 
-    def __call__(self, value: typing.Any, msg: typing.Optional[str] = None) -> typing.Any:
+    def __call__(
+        self, value: typing.Any, msg: typing.Optional[str] = None
+    ) -> typing.Any:
         """Check if the value matches the literal."""
         if self.lit != value:
             raise LiteralInvalid(msg or f"{value} not match for {self.lit}")
