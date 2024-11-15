@@ -139,13 +139,13 @@ class Schema(object):
             return cls({k: cls.infer(v) for k, v in data.items()})
         elif isinstance(data, list):
             if data:
-                return [cls.infer(data[0])]
+                return cls([cls.infer(data[0])])
             else:
-                return []
+                return cls([])
         elif isinstance(data, (int, float, str, bool)):
-            return type(data)
+            return cls(type(data))
         else:
-            return object
+            return cls(object)
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, Schema):
@@ -731,7 +731,8 @@ class Marker(object):
         self.description = description
         self.__hash__ = cache(lambda: hash(schema_))
 
-    def __call__(self, v):
+    def __call__(self, v: typing.Any) -> typing.Any:
+        """Validate the value against the schema."""
         try:
             return self._schema(v)
         except er.Invalid as e:
@@ -945,6 +946,7 @@ class Remove(Marker):
         self.__hash__ = cache(lambda: object.__hash__(self))
 
     def __call__(self, schema: Schemable) -> typing.Type[Remove]:
+        """Apply the Remove marker to the schema."""
         super(Remove, self).__call__(schema)
         return self.__class__
 
@@ -1023,7 +1025,7 @@ def _merge_args_with_kwargs(
     return ret
 
 
-def validate(*a, **kw) -> typing.Callable:
+def validate(*a: typing.Any, **kw: typing.Any) -> typing.Callable:
     """Decorator for validating arguments of a function against a given schema.
 
     Set restrictions for arguments:
@@ -1040,9 +1042,9 @@ def validate(*a, **kw) -> typing.Callable:
 
     """
 
-    def dec(func):
+    def dec(func: typing.Callable) -> typing.Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
             schema = Schema(kw)
             merged_args = _merge_args_with_kwargs(_args_to_dict(func, args), kwargs)
             validated = schema(merged_args)
