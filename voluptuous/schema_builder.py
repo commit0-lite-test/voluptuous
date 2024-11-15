@@ -4,10 +4,7 @@ import inspect
 import typing
 from functools import cache, wraps
 from voluptuous import error as er
-from voluptuous.error import (
-    Error, Invalid, MultipleInvalid, DictInvalid, RequiredFieldInvalid,
-    ObjectInvalid, SequenceTypeInvalid, SchemaError
-)
+from voluptuous.error import Error, Invalid
 
 
 def default_factory(default: typing.Any) -> typing.Callable[[], typing.Any]:
@@ -1009,9 +1006,7 @@ def message(
             try:
                 return func(*args, **kwargs)
             except ValueError:
-                raise (clsoverride or cls or Invalid)(
-                    msg or default or "invalid value"
-                )
+                raise (clsoverride or cls or Invalid)(msg or default or "invalid value")
 
         return wrapper
 
