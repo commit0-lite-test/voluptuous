@@ -19,6 +19,8 @@ class InvalidError(Error):
 
     """
 
+Invalid = InvalidError  # Alias for backward compatibility
+
     def __init__(
         self,
         message: str,

@@ -4,7 +4,7 @@ import inspect
 import typing
 from functools import cache, wraps
 from voluptuous import error as er
-from voluptuous.error import Error, Invalid
+from voluptuous.error import Error, InvalidError as Invalid
 
 
 def default_factory(default: typing.Any) -> typing.Callable[[], typing.Any]:
